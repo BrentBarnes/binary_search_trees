@@ -51,7 +51,7 @@ class Tree
 
   def initialize(array)
     @array = array
-    @root = nil
+    @root = build_tree(array, 0, array.uniq.length - 1)
   end
 
   def build_tree(array, start, last)
@@ -67,9 +67,7 @@ class Tree
     return root
   end
 
-  def insert(array, new_data)
-    root = build_tree(array, 0, array.uniq.length - 1)
-     
+  def insert(array, new_data) 
     leaf = recursive_compare(root, new_data)
     p leaf.data
     greater_than_leaf = compare_one(leaf, new_data)
@@ -79,11 +77,9 @@ class Tree
     elsif !greater_than_leaf
       leaf.left_child = Node.new(new_data)
     end
-    leaf.left_child.data
   end
 
   def find(value)
-    root = build_tree(array, 0, array.uniq.length - 1)
     closest_node = recursive_compare(root, value).data
     return puts 'Node does not exist' if closest_node != value
 
