@@ -14,21 +14,25 @@ module Comparable
     end
   end
 
-  def recursive_compare(root, data)
-    return root if data == root.data
+  def recursive_compare(root, value, parent=false)
+    return root if value == root.data
     # return if root.nil?
 
-    if data < root.data
+    if !root.left_child.nil? && root.left_child.data == value && parent ||
+      !root.right_child.nil? && root.right_child.data == value && parent
+
+      root
+    elsif value < root.data
       return root if root.left_child.nil?
       p "Root: #{root.data}"
       root = root.left_child
-      root = recursive_compare(root, data)
+      root = recursive_compare(root, value, parent)
       root
-    elsif data > root.data
+    elsif value > root.data
       return root if root.right_child.nil?
       p "Root: #{root.data}"
       root = root.right_child
-      root = recursive_compare(root, data)
+      root = recursive_compare(root, value, parent)
       root
     end
   end
@@ -80,16 +84,58 @@ class Tree
   end
 
   def find(value)
-    closest_node = recursive_compare(root, value).data
-    return puts 'Node does not exist' if closest_node != value
+    closest_node = recursive_compare(root, value)
+    puts "Found Node: #{closest_node.data}"
+    # return puts 'Node does not exist' if closest_node.data != value
 
       closest_node
   end
 
+  def find_parent(value)
+    recursive_compare(root, value, true)
+  end
+
+  def delete(value)
+    node = find(value)
+    puts "Node: #{node.data}"
+    parent = find_parent(value)
+    puts "Parent: #{parent.data}"
+    left_or_right = compare_one(parent, node.data)
+    children = 0
+    if !node.left_child.nil? then children += 1 end
+    if !node.right_child.nil? then children += 1 end
+
+    if children == 0
+      if compare_one(parent, node.data) 
+        parent.right_child = nil
+      else 
+        parent.left_child = nil
+      end
+    end
+    
+    if children == 1 && !left_or_right
+      if !node.left_child.nil?
+        parent.left_child = node.left_child
+      elsif !node.right_child.nil?
+        parent.left_child = node.right_child
+      end
+    elsif children == 1 && left_or_right
+      if !node.left_child.nil?
+        parent.right_child = node.left_child
+      elsif !node.right_child.nil?
+        parent.right_child = node.right_child
+      end
+    end
+
+    
+
+  end
 end
 
 test = Tree.new(array)
 
-p test.insert(array, 2)
-p test.find(2)
+
+p test.delete(324)
+p test.find(67).right_child.data
+
 
