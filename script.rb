@@ -1,4 +1,4 @@
-array = [1,7,4,23,8,9,4,3,5,7,9,67,6345,324]
+array = (Array.new(15) {rand(1..100)})
 
 module Comparable
 
@@ -16,11 +16,6 @@ module Comparable
 
   def recursive_compare(root, value, parent=false)
     return root if value == root.data
-    # return if root.nil?
-
-    # puts "Root: #{root.data}"
-    if !root.left_child.nil? then puts "Left child: #{root.left_child.data}" end
-    if !root.right_child.nil? then puts "Right child: #{root.right_child.data}" end
 
     if !root.left_child.nil? && root.left_child.data == value && parent ||
       !root.right_child.nil? && root.right_child.data == value && parent
@@ -28,13 +23,11 @@ module Comparable
       root
     elsif value < root.data
       return root if root.left_child.nil?
-      # p "Root: #{root.data}"
       root = root.left_child
       root = recursive_compare(root, value, parent)
       root
     elsif value > root.data
       return root if root.right_child.nil?
-      # p "Root: #{root.data}"
       root = root.right_child
       root = recursive_compare(root, value, parent)
       root
@@ -75,9 +68,8 @@ class Tree
     return root
   end
 
-  def insert(array, new_data) 
+  def insert(new_data) 
     leaf = recursive_compare(root, new_data)
-    p leaf.data
     greater_than_leaf = compare_one(leaf, new_data)
 
     if greater_than_leaf
@@ -89,10 +81,14 @@ class Tree
 
   def find(value)
     closest_node = recursive_compare(root, value)
-    # puts "Found Node: #{closest_node.data}"
     return puts 'Node does not exist' if closest_node.data != value
 
       closest_node
+  end
+
+  def find?(value)
+    closest_node = recursive_compare(root, value)
+    if closest_node.data != value then false else true end
   end
 
   def find_parent(value)
@@ -116,9 +112,7 @@ class Tree
 
   def delete(value)
     node = find(value)
-    puts "Node: #{node.data}"
     parent = find_parent(value)
-    # puts "Parent: #{parent.data}"
     left_or_right = compare_one(parent, node.data)
     children = 0
     if !node.left_child.nil? then children += 1 end
@@ -164,42 +158,161 @@ class Tree
     end
   end
 
-  def level_order(queue=[], result =[], started=false, popped=root)
-    # queue = queue
+  def level_order(queue=[], result =[], started=false, popped=root, &block)
     show_queue = []
-    # result = result
-    queue.each {|item| show_queue << item.data}
-    puts "Show Queue: #{show_queue}"
-    puts "Popped: #{popped.data}"
 
     if queue.empty? && started
-      # && popped.left_child.nil? && popped.right_child.nil?
       puts "Basecase hit"
       return
     elsif !started
       queue << popped
-      level_order(queue, result, true)
+      level_order(queue, result, true, &block)
     elsif !block_given?
       popped = queue.pop
       queue.unshift(popped.left_child) unless popped.left_child.nil?
       queue.unshift(popped.right_child) unless popped.right_child.nil?
       result << popped.data
-      level_order(queue, result, true, popped)
+      level_order(queue, result, true, popped, &block)
     elsif block_given?
       popped = queue.pop
       queue.unshift(popped.left_child) unless popped.left_child.nil?
       queue.unshift(popped.right_child) unless popped.right_child.nil?
-      result << yield(popped)
-      level_order(queue, result, true, popped)
-
+      result << block.call(popped)
+      level_order(queue, result, true, popped, &block)
     end
     result
+  end
+
+  def preorder(value=root.data, result=[], &block)
+    node = find(value)
+
+    if !block_given?
+      result << node.data
+      preorder(node.left_child.data, result) unless node.left_child.nil?
+      preorder(node.right_child.data, result) unless node.right_child.nil?
+    elsif block_given?
+      result << block.call(node)
+      preorder(node.left_child.data, result) unless node.left_child.nil?
+      preorder(node.right_child.data, result) unless node.right_child.nil?
+    end
+    result
+  end
+
+  def inorder(value=root.data, result=[], &block)
+    node = find(value)
+
+
+    if !block_given?
+      inorder(node.left_child.data, result) unless node.left_child.nil?
+      result << node.data
+      inorder(node.right_child.data, result) unless node.right_child.nil?
+    elsif block_given?
+      inorder(node.left_child.data, result, &block) unless node.left_child.nil?
+      result << block.call(node)
+      inorder(node.right_child.data, result, &block) unless node.right_child.nil?
+    end
+    return result
+  end
+
+  def postorder(value=root.data, result=[], &block)
+    node = find(value)
+
+
+    if !block_given?
+      postorder(node.left_child.data, result) unless node.left_child.nil?
+      postorder(node.right_child.data, result) unless node.right_child.nil?
+      result << node.data
+    elsif block_given?
+      postorder(node.left_child.data, result, &block) unless node.left_child.nil?
+      postorder(node.right_child.data, result, &block) unless node.right_child.nil?
+      result << block.call(node)
+    end
+    result
+  end
+
+  def height(value, counter=-1, hash={}, leafs=[])
+    node = find(value)
+    counter += 1
+    hash[counter] = node.data
+
+    if node.left_child.nil? && node.right_child.nil?
+      leafs << hash.max_by{|k, v| k}[0]
+    end
+      height(node.left_child.data, counter, hash, leafs) unless node.left_child.nil?
+      height(node.right_child.data, counter, hash, leafs) unless node.right_child.nil?
+      hash.delete(counter)
+      leafs.max
+  end
+
+  def depth(value, base=root, counter=0)
+    return counter if value == base.data
+    return if !find(value)
+
+    if value < base.data
+      return base if base.left_child.nil?
+      base = base.left_child
+      counter += 1
+      base = depth(value, base, counter)
+    elsif value > base.data
+      return base if base.right_child.nil?
+      base = base.right_child
+      counter += 1
+      base = depth(value, base, counter)
+    end
+  end
+
+  def balanced?(node=root, counter=0, hash={}, leafs=[])
+    counter += 1
+    hash[counter] = node.data
+
+    if node.left_child.nil? && node.right_child.nil?
+      leafs << hash.max_by{|k, v| k}[0]
+    end
+    height(node.left_child.data, counter, hash, leafs) unless node.left_child.nil?
+    height(node.right_child.data, counter, hash, leafs) unless node.right_child.nil?
+    hash.delete(counter)
+
+    if (leafs.max - leafs.min) <= 1 then true else false end
+  end
+
+  def rebalance
+    @array = inorder(root.data)
+    @root = @root = build_tree(array, 0, array.uniq.length - 1)
+    return
+  end
+
+  def pretty_print(node = @root, prefix = '', is_left = true)
+    pretty_print(node.right_child, "#{prefix}#{is_left ? '│   ' : '    '}", false) if node.right_child
+    puts "#{prefix}#{is_left ? '└── ' : '┌── '}#{node.data}"
+    pretty_print(node.left_child, "#{prefix}#{is_left ? '    ' : '│   '}", true) if node.left_child
   end
 end
 
 test = Tree.new(array)
 
-p test.level_order {|popped| puts popped.data}
-
+puts "Random array:"
+p test.array
+p test.pretty_print
+puts "Is the tree balanced?"
+p test.balanced?
+puts "Pre, in, and post order"
+p test.preorder
+p test.inorder
+p test.postorder
+test.insert(150)
+test.insert(200)
+test.insert(250)
+test.insert(300)
+p test.pretty_print
+puts "Is the tree balanced?"
+p test.balanced?
+p test.rebalance
+puts "Is the tree balanced?"
+p test.balanced?
+p test.pretty_print
+puts "Pre, in, and post order"
+p test.preorder
+p test.inorder
+p test.postorder
 
 
