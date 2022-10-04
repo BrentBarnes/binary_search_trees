@@ -3,6 +3,8 @@
 This assignment was designed to practice working with the binary search tree data structure.
 Binary search are great because they store information in a way that can be efficiently accessed. They can be easily accessed with <strong>breadth or depth first searches</strong>.
 
+![Binary Search Tree](binary_tree.png)
+
 ### Project includes
 
 * Node class
