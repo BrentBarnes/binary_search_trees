@@ -1,4 +1,4 @@
-array = (Array.new(15) {rand(1..100)})
+array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 module Comparable
 
@@ -17,18 +17,18 @@ module Comparable
   def recursive_compare(root, value, parent=false)
     return root if value == root.data
 
-    if !root.left_child.nil? && root.left_child.data == value && parent ||
-      !root.right_child.nil? && root.right_child.data == value && parent
+    if !root.left.nil? && root.left.data == value && parent ||
+      !root.right.nil? && root.right.data == value && parent
         
       root
     elsif value < root.data
-      return root if root.left_child.nil?
-      root = root.left_child
+      return root if root.left.nil?
+      root = root.left
       root = recursive_compare(root, value, parent)
       root
     elsif value > root.data
-      return root if root.right_child.nil?
-      root = root.right_child
+      return root if root.right.nil?
+      root = root.right
       root = recursive_compare(root, value, parent)
       root
     end
@@ -37,12 +37,12 @@ end
 
 class Node
   include Comparable
-  attr_accessor :data, :left_child, :right_child
+  attr_accessor :data, :left, :right
 
-  def initialize(data, left_child = nil, right_child = nil)
+  def initialize(data)
     @data = data
-    @left_child = nil
-    @right_child = nil
+    @left = nil
+    @right = nil
   end
 end
 
@@ -51,44 +51,43 @@ class Tree
   attr_accessor :array, :root
 
   def initialize(array)
-    @array = array
+    @array = array.sort.uniq
     @root = build_tree(array, 0, array.uniq.length - 1)
   end
 
   def build_tree(array, start, last)
-    array = array.sort.uniq
     return if start > last
 
     mid = (start + last)/2
     root = Node.new(array[mid])
 
-    root.left_child = build_tree(array, start, mid-1)
-    root.right_child = build_tree(array, mid+1, last)
+    root.left = build_tree(array, start, mid-1)
+    root.right = build_tree(array, mid+1, last)
 
     return root
   end
 
-  def insert(new_data) 
-    leaf = recursive_compare(root, new_data)
-    greater_than_leaf = compare_one(leaf, new_data)
+  def insert(value, node=root) 
+    return nil if value == node.data
 
-    if greater_than_leaf
-      leaf.right_child = Node.new(new_data)
-    elsif !greater_than_leaf
-      leaf.left_child = Node.new(new_data)
+    if value < node.data
+      node.left.nil? ? node.left = Node.new(value) : insert(value, node.left)
+    else
+      node.right.nil? ? node.right = Node.new(value) : insert(value,node.right)
     end
   end
 
   def find(value)
-    closest_node = recursive_compare(root, value)
-    return puts 'Node does not exist' if closest_node.data != value
+    return node if node.nil? || node.data == value
 
-      closest_node
+    value < node.data ? find(value, node.left) : find(value, node.right)
   end
 
-  def find?(value)
-    closest_node = recursive_compare(root, value)
-    if closest_node.data != value then false else true end
+  def find?(value, node=root)
+    return false if node.nil?
+    return true if node.data == value
+
+    value < node.data ? find?(value, node.left) : find?(value, node.right)
   end
 
   def find_parent(value)
@@ -102,60 +101,36 @@ class Tree
   end
 
   def find_next_largest_node(node)
-    next_largest_node = node.right_child
-    until next_largest_node.left_child.nil?
-      next_largest_node = next_largest_node.left_child
-    end
-    puts "Next largest node is: #{next_largest_node.data}"
+    next_largest_node = node.right
+    next_largest_node = next_largest_node.left until next_largest_node.left.nil?
+
     next_largest_node
   end
 
-  def delete(value)
-    node = find(value)
-    parent = find_parent(value)
-    left_or_right = compare_one(parent, node.data)
-    children = 0
-    if !node.left_child.nil? then children += 1 end
-    if !node.right_child.nil? then children += 1 end
+  def delete(value, node=root)
+    return node if node.nil?
 
-    if children == 0
-      if compare_one(parent, node.data) 
-        parent.right_child = nil
-      else 
-        parent.left_child = nil
-      end
-    end
-    
-    if children == 1 && !left_or_right
-      if !node.left_child.nil?
-        parent.left_child = node.left_child
-      elsif !node.right_child.nil?
-        parent.left_child = node.right_child
-      end
-    elsif children == 1 && left_or_right
-      if !node.left_child.nil?
-        parent.right_child = node.left_child
-      elsif !node.right_child.nil?
-        parent.right_child = node.right_child
-      end
-    end
+    if value < node.data
+      node.left = delete(value, node.left)
+      puts "Left delete until: #{node.data}"
+    elsif value > node.data
+      node.right = delete(value, node.right)
+      puts "Right delete until: #{node.data}"
+    else
+      # if node has one or no child
+      # delete is called recursively until node.left or node.right == nil
+      # this deletes the pointer to that node, thus deleting the node
+      return node.right if node.left.nil?
+      return node.left if node.right.nil?
 
-    if children == 2
-    replacement_node = find_next_largest_node(node)
-    delete(replacement_node.data)
-    replacement_node.left_child = node.left_child
-    replacement_node.right_child = node.right_child
-    node.left_child = nil
-    node.right_child = nil
-
-      if parent.nil?
-        @root = replacement_node
-      elsif !left_or_right
-        parent.left_child = replacement_node
-      elsif left_or_right
-        parent.right_child = replacement_node
-      end
+      # if node has two children
+      next_largest_node = find_next_largest_node(node)
+      puts "Next largest node: #{next_largest_node}"
+      node.data = next_largest_node.data
+      node.right = delete(next_largest_node.data, node.right)
     end
+    p "Node: #{node.data}"
+    node
   end
 
   def level_order(queue=[], result =[], started=false, popped=root, &block)
@@ -169,14 +144,14 @@ class Tree
       level_order(queue, result, true, &block)
     elsif !block_given?
       popped = queue.pop
-      queue.unshift(popped.left_child) unless popped.left_child.nil?
-      queue.unshift(popped.right_child) unless popped.right_child.nil?
+      queue.unshift(popped.left) unless popped.left.nil?
+      queue.unshift(popped.right) unless popped.right.nil?
       result << popped.data
       level_order(queue, result, true, popped, &block)
     elsif block_given?
       popped = queue.pop
-      queue.unshift(popped.left_child) unless popped.left_child.nil?
-      queue.unshift(popped.right_child) unless popped.right_child.nil?
+      queue.unshift(popped.left) unless popped.left.nil?
+      queue.unshift(popped.right) unless popped.right.nil?
       result << block.call(popped)
       level_order(queue, result, true, popped, &block)
     end
@@ -188,12 +163,12 @@ class Tree
 
     if !block_given?
       result << node.data
-      preorder(node.left_child.data, result) unless node.left_child.nil?
-      preorder(node.right_child.data, result) unless node.right_child.nil?
+      preorder(node.left.data, result) unless node.left.nil?
+      preorder(node.right.data, result) unless node.right.nil?
     elsif block_given?
       result << block.call(node)
-      preorder(node.left_child.data, result) unless node.left_child.nil?
-      preorder(node.right_child.data, result) unless node.right_child.nil?
+      preorder(node.left.data, result) unless node.left.nil?
+      preorder(node.right.data, result) unless node.right.nil?
     end
     result
   end
@@ -203,13 +178,13 @@ class Tree
 
 
     if !block_given?
-      inorder(node.left_child.data, result) unless node.left_child.nil?
+      inorder(node.left.data, result) unless node.left.nil?
       result << node.data
-      inorder(node.right_child.data, result) unless node.right_child.nil?
+      inorder(node.right.data, result) unless node.right.nil?
     elsif block_given?
-      inorder(node.left_child.data, result, &block) unless node.left_child.nil?
+      inorder(node.left.data, result, &block) unless node.left.nil?
       result << block.call(node)
-      inorder(node.right_child.data, result, &block) unless node.right_child.nil?
+      inorder(node.right.data, result, &block) unless node.right.nil?
     end
     return result
   end
@@ -219,12 +194,12 @@ class Tree
 
 
     if !block_given?
-      postorder(node.left_child.data, result) unless node.left_child.nil?
-      postorder(node.right_child.data, result) unless node.right_child.nil?
+      postorder(node.left.data, result) unless node.left.nil?
+      postorder(node.right.data, result) unless node.right.nil?
       result << node.data
     elsif block_given?
-      postorder(node.left_child.data, result, &block) unless node.left_child.nil?
-      postorder(node.right_child.data, result, &block) unless node.right_child.nil?
+      postorder(node.left.data, result, &block) unless node.left.nil?
+      postorder(node.right.data, result, &block) unless node.right.nil?
       result << block.call(node)
     end
     result
@@ -235,11 +210,11 @@ class Tree
     counter += 1
     hash[counter] = node.data
 
-    if node.left_child.nil? && node.right_child.nil?
+    if node.left.nil? && node.right.nil?
       leafs << hash.max_by{|k, v| k}[0]
     end
-      height(node.left_child.data, counter, hash, leafs) unless node.left_child.nil?
-      height(node.right_child.data, counter, hash, leafs) unless node.right_child.nil?
+      height(node.left.data, counter, hash, leafs) unless node.left.nil?
+      height(node.right.data, counter, hash, leafs) unless node.right.nil?
       hash.delete(counter)
       leafs.max
   end
@@ -249,13 +224,13 @@ class Tree
     return if !find(value)
 
     if value < base.data
-      return base if base.left_child.nil?
-      base = base.left_child
+      return base if base.left.nil?
+      base = base.left
       counter += 1
       base = depth(value, base, counter)
     elsif value > base.data
-      return base if base.right_child.nil?
-      base = base.right_child
+      return base if base.right.nil?
+      base = base.right
       counter += 1
       base = depth(value, base, counter)
     end
@@ -265,11 +240,11 @@ class Tree
     counter += 1
     hash[counter] = node.data
 
-    if node.left_child.nil? && node.right_child.nil?
+    if node.left.nil? && node.right.nil?
       leafs << hash.max_by{|k, v| k}[0]
     end
-    height(node.left_child.data, counter, hash, leafs) unless node.left_child.nil?
-    height(node.right_child.data, counter, hash, leafs) unless node.right_child.nil?
+    height(node.left.data, counter, hash, leafs) unless node.left.nil?
+    height(node.right.data, counter, hash, leafs) unless node.right.nil?
     hash.delete(counter)
 
     if (leafs.max - leafs.min) <= 1 then true else false end
@@ -282,37 +257,16 @@ class Tree
   end
 
   def pretty_print(node = @root, prefix = '', is_left = true)
-    pretty_print(node.right_child, "#{prefix}#{is_left ? '│   ' : '    '}", false) if node.right_child
+    pretty_print(node.right, "#{prefix}#{is_left ? '│   ' : '    '}", false) if node.right
     puts "#{prefix}#{is_left ? '└── ' : '┌── '}#{node.data}"
-    pretty_print(node.left_child, "#{prefix}#{is_left ? '    ' : '│   '}", true) if node.left_child
+    pretty_print(node.left, "#{prefix}#{is_left ? '    ' : '│   '}", true) if node.left
   end
 end
 
 test = Tree.new(array)
 
-puts "Random array:"
-p test.array
 p test.pretty_print
-puts "Is the tree balanced?"
-p test.balanced?
-puts "Pre, in, and post order"
-p test.preorder
-p test.inorder
-p test.postorder
-test.insert(150)
-test.insert(200)
-test.insert(250)
-test.insert(300)
+p test.delete(4)
 p test.pretty_print
-puts "Is the tree balanced?"
-p test.balanced?
-p test.rebalance
-puts "Is the tree balanced?"
-p test.balanced?
-p test.pretty_print
-puts "Pre, in, and post order"
-p test.preorder
-p test.inorder
-p test.postorder
 
 
